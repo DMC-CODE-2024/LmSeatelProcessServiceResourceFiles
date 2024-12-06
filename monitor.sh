@@ -1,21 +1,24 @@
 #!/bin/bash
-process=seatelfileprocess.jar
-script_name="./monitor.sh"
-count=`ps -ef | grep $process | grep -v grep | grep -v "$script_name"  |wc -l`
-if [ $count -gt 1 ]
+process=lm_seatel.jar
+instances=1
+script_name="./stop.sh"
+count=`ps -ef | grep $process | grep -v grep | grep -v "$script_name" | wc -l`
+if [ $count != $instances ]
 then
-        echo "Multiple Instances Running"
-        echo
-        ps -ef | grep $process | grep -v grep | grep -v "$script_name"
-elif [ $count -eq 0 ]
-then
-        echo "No Process Running"
-elif [ $count -eq 1 ]
-then
-        echo "Process Running"
-        echo
-        ps -ef | grep $process | grep -v grep | grep -v "$script_name"
-else
-        echo "No Process Found"
-fi
+        if [ $count -eq 0 ]
+        then
+                echo "No Process Running"
+        else
+                echo "Instances Count Not Equal : "$count
+                echo
+                ps -ef | grep $process | grep -v grep | grep -v "./stop.sh"
+        fi
+elif [ $count -eq $instances ] && [ $count -ne 0 ]
 
+then
+        pid=`ps -ef | grep "$process" | grep -v grep | grep -v "$script_name" | awk '{print $2}'`
+        kill -9 $(ps aux | grep "$process" | grep -v grep | grep -v "$script_name" | awk '{print $2}')
+        echo "Process killed"
+else
+        echo "No Process Running"
+fi
