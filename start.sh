@@ -1,16 +1,61 @@
 #!/bin/bash
-source ~/.bash_profile
 set -x
-VAR=""
-build_path="${APP_HOME}/seatelfileprocess/"
-build="seatelfileprocess.jar"
-cd $build_path
-status=`ps -ef | grep $build | grep application.properties | grep java`
-if [ "$status" != "$VAR" ]
+module_name="lm_seatel"
+main_module="list_management"
+log_level="INFO"                # INFO, DEBUG, ERROR
+
+########### DO NOT CHANGE ANY CODE OR TEXT AFTER THIS LINE #########
+
+
+. ~/.bash_profile
+
+build="${module_name}.jar"
+
+pid=`ps -ef | grep $build | grep java | grep $module_name | grep -v grep | grep -v api | awk '{print $2}'`
+
+if [ "${pid}" != "" ]  ## Process is currently running
+then
+  echo "${module_name} process is currently running with PID ${pid} ..."
+
+else  ## No process running
+
+  if [ "${main_module}" == "" ]
   then
-    echo "Process Already Running"
+     build_path="${APP_HOME}/${module_name}_module"
+     log_path="${LOG_HOME}/${module_name}_module"
   else
-    echo "Starting Process"
-    java -Dlog4j.configurationFile=file:./log4j2.xml -jar $build --spring.config.location=file:/u01/eirsapp/configuration/configuration.properties,file:./application.properties 1>/dev/null 2>/dev/null &
-    echo "Process Started"
+     if [ "${main_module}" == "utility" ] || [ "${main_module}" == "api_service" ] || [ "${main_module}" == "gui" ]
+     then
+       build_path="${APP_HOME}/${main_module}/${module_name}"
+       log_path="${LOG_HOME}/${main_module}/${module_name}"
+     else
+       build_path="${APP_HOME}/${main_module}_module/${module_name}"
+       log_path="${LOG_HOME}/${main_module}_module/${module_name}"
+     fi
+  fi
+
+  cd ${build_path}
+  mkdir -p ${log_path}
+  
+  ## Starting the process
+
+  echo "Starting ${module_name} process..."
+
+  java -Dlog4j.configurationFile=file:./log4j2.xml -Dlog.level=${log_level} -Dlog.path=${log_path} -Dmodule.name=${module_name}  -Dspring.config.location=file:./application.properties,file:${commonConfigurationFile}  -jar ${build}  1>/dev/null 2>${log_path}/${module_name}.error &
+
+  ## check if process started successfully or not
+
+  pid=`ps -ef | grep $build | grep java | grep $module_name | grep -v grep | grep -v api | awk '{print $2}'`
+
+  if [ "$pid" == "" ]
+  then
+
+    echo "Failed to start $module_name process !!!"
+
+  else
+
+    echo "$module_name process is started successfully with PID ${pid} ..."
+
+  fi
+
 fi
